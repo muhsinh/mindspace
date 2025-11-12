@@ -3,8 +3,8 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Dict, Any, List
-import datetime  # <-- added
+from typing import Dict, Any, List, Optional
+import datetime
 
 import yaml
 from tqdm import tqdm
@@ -19,34 +19,36 @@ def load_config(path: str) -> Dict[str, Any]:
 
 def load_transcripts(path: str) -> List[Dict[str, Any]]:
     with Path(path).open() as f:
-        return [json.loads(line) for line in f]
+        return [json.loads(line) for line in f if line.strip()]
 
 
-def run_mindspace(config_path: str) -> None:
+def run_mindspace(config_path: str, transcripts_override: Optional[str] = None) -> None:
     cfg = load_config(config_path)
 
     model_cfg = cfg["model"]
     paths_cfg = cfg["paths"]
     ms_cfg = cfg["mindspace"]
 
+    # allow override of transcripts path (CLI wins)
+    if transcripts_override is not None:
+        transcripts_path = transcripts_override
+    else:
+        transcripts_path = paths_cfg["transcripts"]
+
     client = make_client(model_cfg["base_url"])
     model_id = model_cfg["id"]
 
-    transcripts = load_transcripts(paths_cfg["transcripts"])
+    transcripts = load_transcripts(transcripts_path)
     max_scenarios = int(ms_cfg.get("max_scenarios", len(transcripts)))
     transcripts = transcripts[:max_scenarios]
 
     debater_max_tokens = int(ms_cfg.get("debater_max_tokens", 256))
     referee_max_tokens = int(ms_cfg.get("referee_max_tokens", 256))
 
-    # ----------------------------------------------------
-    # Timestamped reasoning output file
-    # ----------------------------------------------------
+    # timestamped reasoning output
     out_path = Path(paths_cfg["reasoning"])
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_path = out_path.with_name(
-        out_path.stem + f"_{timestamp}" + out_path.suffix
-    )
+    out_path = out_path.with_name(out_path.stem + f"_{timestamp}" + out_path.suffix)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -140,5 +142,9 @@ def run_mindspace(config_path: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="config/base.yaml")
+    parser.add_argument(
+        "--transcripts",
+        help="Override transcripts JSONL path (e.g. latest PETRI output)",
+    )
     args = parser.parse_args()
-    run_mindspace(args.config)
+    run_mindspace(args.config, transcripts_override=args.transcripts)
