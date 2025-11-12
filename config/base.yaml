@@ -11,11 +11,11 @@ paths:
 
 petri:
   max_turns: 4
-  max_scenarios: 50
+  max_scenarios: 100
   parallel: 4
 
 mindspace:
-  max_scenarios: 30
+  max_scenarios: 100
   debater_max_tokens: 256
   referee_max_tokens: 256
 
