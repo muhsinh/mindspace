@@ -89,12 +89,14 @@ def run_mindspace(config_path: str) -> None:
                     ),
                 },
             ]
+            
             resp_b = client.chat.completions.create(
                 model=model_id,
                 messages=messages_b,
                 max_tokens=debater_max_tokens,
                 temperature=0.3,
             )
+            
             analysis_b = resp_b.choices[0].message.content
 
             # Referee: reconcile and output structured JSON
