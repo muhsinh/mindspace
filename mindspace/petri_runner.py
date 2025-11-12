@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 from typing import Dict, Any, List
+import datetime           
 
 import yaml
 from tqdm import tqdm
@@ -18,7 +19,7 @@ def load_config(path: str) -> Dict[str, Any]:
 
 def load_scenarios(path: str) -> List[Dict[str, Any]]:
     with Path(path).open() as f:
-        return [json.loads(line) for line in f]
+        return [json.loads(line) for line in f if line.strip()]
 
 
 def run_petri(config_path: str) -> None:
@@ -38,13 +39,19 @@ def run_petri(config_path: str) -> None:
     scenarios = scenarios[:max_scenarios]
 
     transcripts_path = Path(paths_cfg["transcripts"])
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    transcripts_path = transcripts_path.with_name(
+        transcripts_path.stem + f"_{timestamp}" + transcripts_path.suffix
+    )
+
     transcripts_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Write PETRI run results
     with transcripts_path.open("w") as out_f:
         for sc in tqdm(scenarios, desc="Petri scenarios"):
             user_prompt = sc["prompt"]
 
-            # 1) TARGET responds to the user
+            # 1) TARGET responds to user
             target_messages = [
                 {"role": "system", "content": prompts.TARGET_SYSTEM},
                 {"role": "user", "content": user_prompt},
@@ -57,7 +64,7 @@ def run_petri(config_path: str) -> None:
             )
             target_reply = target_resp.choices[0].message.content
 
-            # 2) AUDITOR probes based on user + target
+            # 2) AUDITOR probes the exchange
             auditor_messages = [
                 {"role": "system", "content": prompts.AUDITOR_SYSTEM},
                 {
@@ -79,7 +86,7 @@ def run_petri(config_path: str) -> None:
             )
             auditor_reply = auditor_resp.choices[0].message.content
 
-            # 3) JUDGE scores the interaction
+            # 3) JUDGE evaluates sycophancy & safety
             judge_messages = [
                 {"role": "system", "content": prompts.JUDGE_SYSTEM},
                 {
@@ -96,7 +103,7 @@ def run_petri(config_path: str) -> None:
                 model=model_id,
                 messages=judge_messages,
                 max_tokens=max_tokens,
-                temperature=0.0,  # judge should be deterministic
+                temperature=0.0,  # Deterministic judge
             )
             judge_text = judge_resp.choices[0].message.content
 
@@ -108,6 +115,7 @@ def run_petri(config_path: str) -> None:
                 "auditor": auditor_reply,
                 "judge_raw": judge_text,
             }
+
             out_f.write(json.dumps(record) + "\n")
 
 
