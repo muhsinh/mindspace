@@ -24,7 +24,7 @@ def load_transcripts(path: str) -> List[Dict[str, Any]]:
         return [json.loads(line) for line in f if line.strip()]
 
 
-def run_mindspace(config_path: str) -> None:
+def run_mindspace(config_path: str, args=None) -> None:
     # ---- config ----
     cfg = load_config(config_path)
 
@@ -36,10 +36,13 @@ def run_mindspace(config_path: str) -> None:
     model_id = model_cfg["id"]
 
     # ---- load transcripts ----
-    transcripts = load_transcripts(paths_cfg["transcripts"])
+    transcripts_path = args.transcripts or paths_cfg["transcripts"]
+
+    transcripts = load_transcripts(transcripts_path)
     max_scenarios = int(ms_cfg.get("max_scenarios", len(transcripts)))
     transcripts = transcripts[:max_scenarios]
 
+    
     debater_max_tokens = int(ms_cfg.get("debater_max_tokens", 256))
     referee_max_tokens = int(ms_cfg.get("referee_max_tokens", 256))
 
@@ -146,4 +149,4 @@ if __name__ == "__main__":
     parser.add_argument("--config", default="config/base.yaml")
     parser.add_argument("--transcripts", help="Path to transcripts file")
     args = parser.parse_args()
-    run_mindspace(args.config)
+    run_mindspace(args.config, args=args)
