@@ -144,5 +144,6 @@ def run_mindspace(config_path: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="config/base.yaml")
+    parser.add_argument("--transcripts", help="Path to transcripts file")
     args = parser.parse_args()
     run_mindspace(args.config)
