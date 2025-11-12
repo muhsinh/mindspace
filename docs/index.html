@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mindspace / PETRI Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 1.5rem;
+      background: #0b1020;
+      color: #f7f7ff;
+    }
+    h1 { margin-top: 0; }
+    .panel {
+      background: #151a2c;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.03);
+    }
+    .panel h2 { margin-top: 0; }
+    label { font-size: 0.9rem; }
+    input[type="file"] {
+      margin-top: 0.25rem;
+      margin-bottom: 0.75rem;
+    }
+    .row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .col {
+      flex: 1 1 320px;
+      min-width: 280px;
+    }
+    select, input[type="text"] {
+      width: 100%;
+      padding: 0.35rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid #333a5a;
+      background: #090d1a;
+      color: #f7f7ff;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      margin-bottom: 0.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-top: 0.5rem;
+    }
+    th, td {
+      border: 1px solid #30364f;
+      padding: 0.35rem 0.45rem;
+      vertical-align: top;
+    }
+    th {
+      background: #1b2238;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    tbody tr:nth-child(even) {
+      background: #111628;
+    }
+    tbody tr:nth-child(odd) {
+      background: #0c111f;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      background: #222b4a;
+      font-size: 0.7rem;
+      margin-right: 0.15rem;
+    }
+    .pill {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      margin-right: 0.25rem;
+    }
+    .pill-low    { background: rgba(46, 204, 113, 0.16); border: 1px solid rgba(46,204,113,0.4); }
+    .pill-medium { background: rgba(241, 196, 15, 0.16); border: 1px solid rgba(241,196,15,0.4); }
+    .pill-high   { background: rgba(231, 76, 60, 0.16);  border: 1px solid rgba(231,76,60,0.4); }
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+    .section-title span {
+      font-size: 0.8rem;
+      opacity: 0.7;
+    }
+    .detail-block {
+      margin-top: 0.4rem;
+      padding: 0.4rem 0.5rem;
+      border-radius: 4px;
+      background: #090d1a;
+      border: 1px solid #262c45;
+      white-space: pre-wrap;
+      font-size: 0.8rem;
+    }
+    .split {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .split > div {
+      flex: 1 1 300px;
+    }
+    .small {
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <h1> Mindspace / PETRI JSONL Viewer</h1>
+
+  <div class="panel">
+    <div class="row">
+      <div class="col">
+        <label><strong>PETRI transcripts (.jsonl)</strong></label><br/>
+        <input type="file" id="petriFile" accept=".jsonl" />
+        <div id="petriSummary" class="small"></div>
+      </div>
+      <div class="col">
+        <label><strong>Mindspace reasoning (.jsonl)</strong></label><br/>
+        <input type="file" id="mindspaceFile" accept=".jsonl" />
+        <div id="mindspaceSummary" class="small"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PETRI VIEW -->
+  <div class="panel" id="petriPanel" style="display:none;">
+    <div class="section-title">
+      <h2>PETRI transcripts</h2>
+      <span id="petriCount"></span>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <label>Filter by tag</label>
+        <select id="petriTagFilter" multiple size="4"></select>
+      </div>
+      <div class="col">
+        <label>Filter by sycophancy_risk</label>
+        <select id="petriRiskFilter">
+          <option value="">(any)</option>
+        </select>
+      </div>
+      <div class="col">
+        <label>Search (user / target / auditor / judge)</label>
+        <input type="text" id="petriSearch" placeholder="hopeless, therapist, etc." />
+      </div>
+    </div>
+
+    <div style="max-height: 380px; overflow:auto; margin-top:0.5rem;">
+      <table id="petriTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tags</th>
+            <th>Sycophancy</th>
+            <th>Support quality</th>
+            <th>User</th>
+            <th>Target</th>
+            <th>Auditor</th>
+            <th>Judge notes</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MINDSPACE VIEW -->
+  <div class="panel" id="mindspacePanel" style="display:none;">
+    <div class="section-title">
+      <h2>Mindspace debates</h2>
+      <span id="mindspaceCount"></span>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <label>Filter by tag</label>
+        <select id="msTagFilter" multiple size="4"></select>
+      </div>
+      <div class="col">
+        <label>Judge sycophancy_risk</label>
+        <select id="msJudgeRiskFilter">
+          <option value="">(any)</option>
+        </select>
+      </div>
+      <div class="col">
+        <label>Ref overall_sycophancy_risk</label>
+        <select id="msRefRiskFilter">
+          <option value="">(any)</option>
+        </select>
+      </div>
+      <div class="col">
+        <label>Search (user / target / auditor / debaters / referee)</label>
+        <input type="text" id="msSearch" placeholder="search text..." />
+      </div>
+    </div>
+
+    <div style="max-height: 260px; overflow:auto; margin-top:0.5rem;">
+      <table id="msTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tags</th>
+            <th>Judge sycophancy</th>
+            <th>Ref overall</th>
+            <th>User</th>
+            <th>Target</th>
+            <th>Ref key_behaviors</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:1rem;">Detail view</h3>
+    <select id="msDetailSelect">
+      <option value="">(select conversation)</option>
+    </select>
+
+    <div id="msDetail" style="margin-top:0.7rem;"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
