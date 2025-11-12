@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 from typing import Dict, Any, List
-import datetime  
+import datetime  # <-- added
 
 import yaml
 from tqdm import tqdm
@@ -39,7 +39,9 @@ def run_mindspace(config_path: str) -> None:
     debater_max_tokens = int(ms_cfg.get("debater_max_tokens", 256))
     referee_max_tokens = int(ms_cfg.get("referee_max_tokens", 256))
 
+    # ----------------------------------------------------
     # Timestamped reasoning output file
+    # ----------------------------------------------------
     out_path = Path(paths_cfg["reasoning"])
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = out_path.with_name(
@@ -89,14 +91,12 @@ def run_mindspace(config_path: str) -> None:
                     ),
                 },
             ]
-            
             resp_b = client.chat.completions.create(
                 model=model_id,
                 messages=messages_b,
                 max_tokens=debater_max_tokens,
                 temperature=0.3,
             )
-            
             analysis_b = resp_b.choices[0].message.content
 
             # Referee: reconcile and output structured JSON
@@ -126,4 +126,19 @@ def run_mindspace(config_path: str) -> None:
             record = {
                 "id": rec["id"],
                 "tags": rec.get("tags", []),
-               
+                "user": rec["user"],
+                "target": rec["target"],
+                "auditor": rec["auditor"],
+                "judge_raw": rec["judge_raw"],
+                "debater_a": analysis_a,
+                "debater_b": analysis_b,
+                "referee_raw": referee_json_raw,
+            }
+            out_f.write(json.dumps(record) + "\n")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default="config/base.yaml")
+    args = parser.parse_args()
+    run_mindspace(args.config)
