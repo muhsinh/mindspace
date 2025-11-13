@@ -4,13 +4,13 @@ import argparse
 import json
 from pathlib import Path
 from typing import Dict, Any, List
-import datetime           
 
 import yaml
 from tqdm import tqdm
 
 from .clients import make_client
 from . import prompts
+from .debate_controller import run_mindspace_debate
 
 
 def load_config(path: str) -> Dict[str, Any]:
@@ -34,26 +34,36 @@ def run_petri(config_path: str) -> None:
     max_tokens = int(model_cfg["max_tokens"])
     temperature = float(model_cfg["temperature"])
 
+    use_ms_debate = bool(petri_cfg.get("use_mindspace_debate", False))
+
     scenarios = load_scenarios(paths_cfg["scenarios"])
     max_scenarios = int(petri_cfg.get("max_scenarios", len(scenarios)))
     scenarios = scenarios[:max_scenarios]
 
     transcripts_path = Path(paths_cfg["transcripts"])
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    transcripts_path = transcripts_path.with_name(
-        transcripts_path.stem + f"_{timestamp}" + transcripts_path.suffix
-    )
-
     transcripts_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write PETRI run results
     with transcripts_path.open("w") as out_f:
         for sc in tqdm(scenarios, desc="Petri scenarios"):
             user_prompt = sc["prompt"]
 
-            # 1) TARGET responds to user
+            # Optional: Mindspace debate BEFORE target acts
+            ms_steering = ""
+            ms_notepad = None
+            ms_debate_trace = None
+            if use_ms_debate:
+                ms_steering, ms_notepad, ms_debate_trace = run_mindspace_debate(
+                    model_cfg=model_cfg,
+                    scenario=sc,
+                )
+
+            # 1) TARGET responds to the user
+            target_system = prompts.TARGET_SYSTEM
+            if ms_steering:
+                target_system = target_system + "\n\n" + ms_steering
+
             target_messages = [
-                {"role": "system", "content": prompts.TARGET_SYSTEM},
+                {"role": "system", "content": target_system},
                 {"role": "user", "content": user_prompt},
             ]
             target_resp = client.chat.completions.create(
@@ -64,7 +74,7 @@ def run_petri(config_path: str) -> None:
             )
             target_reply = target_resp.choices[0].message.content
 
-            # 2) AUDITOR probes the exchange
+            # 2) AUDITOR probes based on user + target
             auditor_messages = [
                 {"role": "system", "content": prompts.AUDITOR_SYSTEM},
                 {
@@ -86,7 +96,7 @@ def run_petri(config_path: str) -> None:
             )
             auditor_reply = auditor_resp.choices[0].message.content
 
-            # 3) JUDGE evaluates sycophancy & safety
+            # 3) JUDGE scores the interaction
             judge_messages = [
                 {"role": "system", "content": prompts.JUDGE_SYSTEM},
                 {
@@ -103,7 +113,7 @@ def run_petri(config_path: str) -> None:
                 model=model_id,
                 messages=judge_messages,
                 max_tokens=max_tokens,
-                temperature=0.0,  # Deterministic judge
+                temperature=0.0,  # judge should be deterministic
             )
             judge_text = judge_resp.choices[0].message.content
 
@@ -115,6 +125,11 @@ def run_petri(config_path: str) -> None:
                 "auditor": auditor_reply,
                 "judge_raw": judge_text,
             }
+
+            if use_ms_debate:
+                record["mindspace_steering"] = ms_steering
+                record["mindspace_notepad"] = ms_notepad
+                record["mindspace_debate_trace"] = ms_debate_trace
 
             out_f.write(json.dumps(record) + "\n")
 
