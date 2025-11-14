@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence, useScroll } from 'framer-motion';
 import { 
   ArrowRight, 
   Brain, 
@@ -16,21 +16,13 @@ import {
   ChevronDown
 } from 'lucide-react';
 
-// --- [1] MOCK DATA & CONFIGURATION ---
-// In a real app, you'd fetch this from GitHub.
-// We mock it here to make the explorer fully interactive.
 
-const GITHUB_ARTIFACTS_BASE = "https://github.com/muhsinh/mindspace/artifacts";
-
+const GITHUB_ARTIFACTS_BASE = "https://github.com/muhsinh/artifacts/";
 
 
 // --- [2] UTILITY & HELPER FUNCTIONS ---
 
-/**
- * Parses a JSONL string into an array of objects.
- * Gracefully handles parsing errors.
- */
-const parseJsonl = (jsonlString) => {
+const parseJsonl = (jsonlString: string): any[] => {
   if (!jsonlString) return [];
   return jsonlString
     .split('\n')
@@ -46,11 +38,7 @@ const parseJsonl = (jsonlString) => {
     .filter(Boolean);
 };
 
-/**
- * Parses a "raw" JSON string (e.g., from judge_raw).
- * Returns the parsed object or the raw string on failure.
- */
-const parseRawJson = (rawString) => {
+const parseRawJson = (rawString: string): any | null => {
   if (!rawString) return null;
   try {
     return JSON.parse(rawString);
@@ -59,10 +47,7 @@ const parseRawJson = (rawString) => {
   }
 };
 
-/**
- * Formats a YYYYMMDD_HHMMSS timestamp into a human-readable string.
- */
-const formatTimestamp = (dateStr, timeStr) => {
+const formatTimestamp = (dateStr: string, timeStr: string): string => {
   const y = dateStr.substring(0, 4);
   const m = dateStr.substring(4, 6);
   const d = dateStr.substring(6, 8);
@@ -86,11 +71,7 @@ const formatTimestamp = (dateStr, timeStr) => {
   });
 };
 
-/**
- * Parses the Mindspace/Petri filename.
- * Returns { type: 'Mindspace' | 'Petri', timestamp: '...' }
- */
-const parseFilename = (filename) => {
+const parseFilename = (filename: string): { type: string; timestamp: string; raw: string } => {
   const match = filename.match(/(reasoning_mindspace|transcripts_petri)_(\d{8})_(\d{6})\.jsonl/);
   if (!match) {
     return { type: 'Unknown', timestamp: filename, raw: filename };
@@ -103,7 +84,7 @@ const parseFilename = (filename) => {
 
 // --- [3] SHARED UI COMPONENTS ---
 
-const Section = ({ children, className = '' }) => (
+const Section: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
   <motion.section
     className={`py-20 px-6 lg:px-8 max-w-7xl mx-auto ${className}`}
     initial={{ opacity: 0, y: 40 }}
@@ -115,7 +96,7 @@ const Section = ({ children, className = '' }) => (
   </motion.section>
 );
 
-const SectionHeader = ({ title, subtitle }) => (
+const SectionHeader: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => (
   <div className="text-center mb-12 max-w-3xl mx-auto">
     <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
       {title}
@@ -126,7 +107,14 @@ const SectionHeader = ({ title, subtitle }) => (
   </div>
 );
 
-const Button = ({ children, onClick, variant = 'primary', icon: Icon, href, target }) => {
+const Button: React.FC<{
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  icon?: React.ElementType;
+  href?: string;
+  target?: string;
+}> = ({ children, onClick, variant = 'primary', icon: Icon, href, target }) => {
   const variants = {
     primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus-visible:ring-indigo-500",
     secondary: "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 focus-visible:ring-gray-400",
@@ -153,7 +141,7 @@ const Button = ({ children, onClick, variant = 'primary', icon: Icon, href, targ
   );
 };
 
-const Badge = ({ children, color = 'gray' }) => {
+const Badge: React.FC<{ children: React.ReactNode; color?: 'gray' | 'red' | 'green' | 'blue' | 'yellow' }> = ({ children, color = 'gray' }) => {
   const colors = {
     gray: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300",
     red: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
@@ -168,7 +156,7 @@ const Badge = ({ children, color = 'gray' }) => {
   );
 };
 
-const CodeBlock = ({ children, lang = 'json' }) => (
+const CodeBlock: React.FC<{ children: React.ReactNode; lang?: string }> = ({ children, lang = 'json' }) => (
   <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg overflow-x-auto">
     <code className={`language-${lang} text-sm text-gray-800 dark:text-gray-200`}>
       {children}
@@ -176,9 +164,9 @@ const CodeBlock = ({ children, lang = 'json' }) => (
   </pre>
 );
 
-const RiskBadge = ({ riskLevel }) => {
+const RiskBadge: React.FC<{ riskLevel: string | undefined }> = ({ riskLevel }) => {
   const level = riskLevel ? riskLevel.toLowerCase() : 'unknown';
-  let color = 'gray';
+  let color: 'gray' | 'red' | 'green' | 'yellow' = 'gray';
   if (level === 'high' || level === 'critical') color = 'red';
   if (level === 'medium') color = 'yellow';
   if (level === 'low' || level === 'none') color = 'green';
@@ -188,21 +176,20 @@ const RiskBadge = ({ riskLevel }) => {
 
 // --- [4] MAIN SITE COMPONENTS ---
 
-const Header = ({ setView, isScrolled }) => {
+const Header: React.FC<{ setView: (view: string) => void; isScrolled: boolean }> = ({ setView, isScrolled }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItemClass = "font-medium text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors";
 
-  const handleScroll = (id) => {
+  const handleScroll = (id: string) => {
     setView('home');
     setIsMobileMenuOpen(false);
-    // Ensure we're on the home page before scrolling
     setTimeout(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   };
   
-  const handleViewChange = (view) => {
+  const handleViewChange = (view: string) => {
     setView(view);
     setIsMobileMenuOpen(false);
   }
@@ -240,7 +227,6 @@ const Header = ({ setView, isScrolled }) => {
         </div>
       </nav>
       
-      {/* Mobile Menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
@@ -267,10 +253,9 @@ const Header = ({ setView, isScrolled }) => {
   );
 };
 
-const Hero = ({ setView }) => {
+const Hero: React.FC<{ setView: (view: string) => void }> = ({ setView }) => {
   return (
     <div className="relative isolate pt-14 pb-32 sm:pb-48">
-      {/* Gradient Background */}
       <div
         className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
         aria-hidden="true"
@@ -318,7 +303,7 @@ const Hero = ({ setView }) => {
   );
 };
 
-const Problem = () => (
+const Problem: React.FC = () => (
   <Section className="bg-gray-50 dark:bg-gray-800/50">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
       <div>
@@ -368,7 +353,7 @@ const Problem = () => (
   </Section>
 );
 
-const Architecture = () => {
+const Architecture: React.FC = () => {
   const cardClass = "bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 h-full";
   const agentClass = "flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg";
   const agentNameClass = "font-semibold text-gray-900 dark:text-gray-100";
@@ -477,7 +462,7 @@ const Architecture = () => {
   );
 };
 
-const ResearchQuestions = () => {
+const ResearchQuestions: React.FC = () => {
   const questions = [
     {
       title: "Mitigation",
@@ -535,7 +520,7 @@ const ResearchQuestions = () => {
   );
 };
 
-const CallToAction = () => (
+const CallToAction: React.FC = () => (
   <Section>
     <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 dark:from-indigo-700 dark:to-indigo-900 text-white rounded-2xl shadow-2xl overflow-hidden">
       <div className="relative p-12 lg:p-16">
@@ -558,7 +543,7 @@ const CallToAction = () => (
   </Section>
 );
 
-const Footer = () => (
+const Footer: React.FC = () => (
   <footer className="border-t border-gray-200 dark:border-gray-700">
     <div className="max-w-7xl mx-auto px-6 py-12 lg:px-8">
       <div className="flex justify-between items-center">
@@ -578,10 +563,25 @@ const Footer = () => (
 
 // --- [5] RUN EXPLORER COMPONENTS ---
 
-/**
- * A collapsible section for the scenario detail view
- */
-const AccordionSection = ({ title, agentName, icon, children, defaultOpen = false }) => {
+interface Scenario {
+  id: string;
+  tags: string[];
+  user: string;
+  target: string;
+  auditor: string;
+  judge_raw: string;
+  debater_a?: string;
+  debater_b?: string;
+  referee_raw?: string;
+}
+
+const AccordionSection: React.FC<{
+  title: string;
+  agentName?: string;
+  icon: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}> = ({ title, agentName, icon, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -620,10 +620,7 @@ const AccordionSection = ({ title, agentName, icon, children, defaultOpen = fals
   );
 };
 
-/**
- * Renders the structured data from a judge_raw or referee_raw field
- */
-const StructuredOutput = ({ data }) => {
+const StructuredOutput: React.FC<{ data: any }> = ({ data }) => {
   if (typeof data === 'string') {
     return <CodeBlock>{data}</CodeBlock>;
   }
@@ -674,7 +671,7 @@ const StructuredOutput = ({ data }) => {
           <div>
             <h4 className="font-semibold mb-2">Misaligned Behaviors:</h4>
             <div className="flex flex-wrap gap-2">
-              {data.misaligned_behaviors.map(tag => <Badge key={tag} color="red">{tag}</Badge>)}
+              {data.misaligned_behaviors.map((tag: string) => <Badge key={tag} color="red">{tag}</Badge>)}
             </div>
           </div>
         )}
@@ -682,7 +679,7 @@ const StructuredOutput = ({ data }) => {
           <div>
             <h4 className="font-semibold mb-2">Positive Behaviors:</h4>
             <div className="flex flex-wrap gap-2">
-              {data.positive_behaviors.map(tag => <Badge key={tag} color="green">{tag}</Badge>)}
+              {data.positive_behaviors.map((tag: string) => <Badge key={tag} color="green">{tag}</Badge>)}
             </div>
           </div>
         )}
@@ -700,10 +697,7 @@ const StructuredOutput = ({ data }) => {
   return <CodeBlock>{JSON.stringify(data, null, 2)}</CodeBlock>;
 };
 
-/**
- * The main detail view for a single scenario
- */
-const ScenarioDetail = ({ scenario }) => {
+const ScenarioDetail: React.FC<{ scenario: Scenario | null }> = ({ scenario }) => {
   if (!scenario) {
     return (
       <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
@@ -719,7 +713,7 @@ const ScenarioDetail = ({ scenario }) => {
     <div className="p-4 sm:p-6 space-y-4">
       <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{scenario.id}</h2>
       <div className="flex flex-wrap gap-2">
-        {scenario.tags.map(tag => <Badge key={tag} color="blue">{tag}</Badge>)}
+        {scenario.tags.map((tag: string) => <Badge key={tag} color="blue">{tag}</Badge>)}
       </div>
       
       <div className="space-y-3 pt-4">
@@ -764,14 +758,15 @@ const ScenarioDetail = ({ scenario }) => {
 
 // --- [6] PAGE COMPONENTS (HOME / EXPLORER) ---
 
-const HomePage = ({ setView }) => {
+const HomePage: React.FC<{ setView: (view: string) => void }> = ({ setView }) => {
   const { scrollY } = useScroll();
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    return scrollY.onChange((latest) => {
+    const unsubscribe = scrollY.on("change", (latest) => {
       setIsScrolled(latest > 50);
     });
+    return () => unsubscribe();
   }, [scrollY]);
   
   return (
@@ -789,19 +784,24 @@ const HomePage = ({ setView }) => {
   );
 };
 
-const RunExplorerPage = ({ setView }) => {
-  const [files, setFiles] = useState([]);
+interface ParsedFile {
+  type: string;
+  timestamp: string;
+  raw: string;
+}
+
+const RunExplorerPage: React.FC<{ setView: (view: string) => void }> = ({ setView }) => {
+  const [files, setFiles] = useState<ParsedFile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [scenarios, setScenarios] = useState([]);
+  const [selectedFile, setSelectedFile] = useState<ParsedFile | null>(null);
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loadingScenarios, setLoadingScenarios] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedScenario, setSelectedScenario] = useState(null);
+  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   
-  // Fetch file list on mount (mocked)
   useEffect(() => {
     setLoading(true);
     setTimeout(() => { // Simulate API delay
@@ -817,7 +817,6 @@ const RunExplorerPage = ({ setView }) => {
     }, 500);
   }, []);
   
-  // Fetch and parse file content when selectedFile changes (mocked)
   useEffect(() => {
     if (!selectedFile) {
       setScenarios([]);
@@ -831,7 +830,7 @@ const RunExplorerPage = ({ setView }) => {
 
     setTimeout(() => { // Simulate API delay
       try {
-        const fileContent = MOCK_FILE_SYSTEM[selectedFile.raw];
+        const fileContent = (MOCK_FILE_SYSTEM as Record<string, string>)[selectedFile.raw];
         if (!fileContent) {
           throw new Error("File not found in mock system.");
         }
@@ -861,7 +860,6 @@ const RunExplorerPage = ({ setView }) => {
   return (
     <div className="flex h-screen w-screen bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
       
-      {/* --- Column 1: File List --- */}
       <aside className="w-80 flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
         <div className="p-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center justify-between">
@@ -906,7 +904,6 @@ const RunExplorerPage = ({ setView }) => {
         </div>
       </aside>
       
-      {/* --- Column 2: Scenario List --- */}
       <aside className="w-96 flex-shrink-0 bg-gray-50 dark:bg-gray-800/50 border-r border-gray-200 dark:border-gray-800 flex flex-col">
         <div className="p-4 border-b border-gray-200 dark:border-gray-800">
           <div className="relative">
@@ -955,7 +952,6 @@ const RunExplorerPage = ({ setView }) => {
         </div>
       </aside>
       
-      {/* --- Column 3: Scenario Detail --- */}
       <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
         <AnimatePresence mode="wait">
           <motion.div
