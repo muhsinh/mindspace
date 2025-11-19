@@ -1,5 +1,14 @@
 # mindspace/debate_controller.py
+from openai import OpenAI
 
+def make_client(model_cfg):
+    base = model_cfg["base_url"].rstrip("/")
+    if not base.endswith("/v1"):
+        base = base + "/v1"
+    return OpenAI(
+        base_url=base,
+        api_key="dummy",
+    )
 import json
 from typing import Dict, Any, Tuple
 
