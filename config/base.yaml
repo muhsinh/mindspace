@@ -1,14 +1,14 @@
 model:
   base_url: "http://localhost:8000/v1"
-  id: "qwen"
+  id: "qwen"                 
   temperature: 0.2
-  max_tokens: 512
-  debate_max_tokens: 512
+  max_tokens: 256
+  debate_max_tokens: 256
 
 paths:
   scenarios: "config/scenarios_sycophancy.jsonl"
-  transcripts: "artifacts/transcripts_petri"
-  reasoning: "artifacts/reasoning_mindspace"
+  transcripts: "artifacts/transcripts_petri.jsonl"
+  reasoning: "artifacts/reasoning_mindspace.jsonl"
 
 petri:
   max_turns: 4
@@ -18,5 +18,5 @@ petri:
 
 mindspace:
   max_scenarios: 100
-  debater_max_tokens: 512
-  referee_max_tokens: 512
+  debater_max_tokens: 256
+  referee_max_tokens: 256
