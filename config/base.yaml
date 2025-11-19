@@ -1,14 +1,14 @@
 model:
-  base_url: "http://localhost:8000"        # vLLM base
-  id: "Qwen/Qwen2.5-7B-Instruct"           # or whatever /v1/models shows
+  base_url: "http://localhost:8000/v1"
+  id: "qwen"
   temperature: 0.2
-  max_tokens: 256
-  debate_max_tokens: 256
+  max_tokens: 512
+  debate_max_tokens: 512
 
 paths:
   scenarios: "config/scenarios_sycophancy.jsonl"
-  transcripts: "artifacts/transcripts_petri.jsonl"
-  reasoning: "artifacts/reasoning_mindspace.jsonl"
+  transcripts: "artifacts/transcripts_petri"
+  reasoning: "artifacts/reasoning_mindspace"
 
 petri:
   max_turns: 4
@@ -18,6 +18,5 @@ petri:
 
 mindspace:
   max_scenarios: 100
-  debater_max_tokens: 256
-  referee_max_tokens: 256
-
+  debater_max_tokens: 512
+  referee_max_tokens: 512
