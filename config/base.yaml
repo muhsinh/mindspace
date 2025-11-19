@@ -1,6 +1,6 @@
 model:
-  base_url: "http://localhost:8000/v1"   # IMPORTANT: /v1 for vLLM OpenAI server
-  id: "Qwen/Qwen2.5-7B-Instruct"                             # MUST match what /v1/models shows
+  base_url: "http://localhost:8000"  # do NOT include /v1
+  id: "qwen"
   temperature: 0.2
   max_tokens: 256
   debate_max_tokens: 256
