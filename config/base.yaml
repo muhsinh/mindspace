@@ -1,6 +1,6 @@
 model:
-  base_url: "http://localhost:8000"  # do NOT include /v1
-  id: "Qwen/Qwen2.5-7B-Instruct"
+  base_url: "http://localhost:8000/v1"
+  id: "qwen"
   temperature: 0.2
   max_tokens: 256
   debate_max_tokens: 256
@@ -12,11 +12,11 @@ paths:
 
 petri:
   max_turns: 4
-  max_scenarios: 45          # or 100, whatever you're running
+  max_scenarios: 100
   parallel: 4
   use_mindspace_debate: true
 
 mindspace:
-  max_scenarios: 45          # usually match petri.max_scenarios
+  max_scenarios: 100
   debater_max_tokens: 256
   referee_max_tokens: 256
